@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <title>URL Shortener</title>
+</head>
+<body>
+  <div class="container">
+    <h1>URL Shortener</h1>
+
+    <form id="shorten-form">
+      <div>
+        <label for="url">Enter URL:</label>
+        <input type="url" name="url" id="url" required placeholder="https://example.com">
+      </div>
+      <div>
+        <label for="shortCode">Enter shortCode:</label>
+        <input type="text" name="shortCode" id="shortCode" placeholder="Optional">
+      </div>
+      <button type="submit">Shorten</button>
+    </form>
+
+    <h2>Shortened URLs</h2>
+    <ul id="Shortened-urls"></ul>
+  </div>
+
+  <script>
+    // Fetch all shortened links and display
+    const fetchShortenedURLs = async () => {
+      try {
+        const response = await fetch("/links");
+        const links = await response.json();
+
+        const list = document.getElementById("Shortened-urls");
+        list.innerHTML = ""; // clear previous entries
+
+        for (const [shortCode, url] of Object.entries(links)) {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <a href="/${shortCode}" target="_blank">${window.location.origin}/${shortCode}</a> → ${url}
+            <button onclick="deleteLink('${shortCode}')">Delete</button>
+          `;
+          list.appendChild(li);
+        }
+      } catch (err) {
+        console.error("Error fetching links:", err);
+      }
+    };
+
+    // Handle form submission
+    document.getElementById("shorten-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const url = document.getElementById("url").value;
+      const shortCode = document.getElementById("shortCode").value;
+
+      try {
+        const response = await fetch("/shorten", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, shortCode })
+        });
+
+        if (response.ok) {
+          fetchShortenedURLs(); // refresh the list
+          document.getElementById("shorten-form").reset(); // clear form
+        } else {
+          const errorMessage = await response.text();
+          alert(errorMessage);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Server error occurred");
+      }
+    });
+
+    // Delete a link
+    const deleteLink = async (shortCode) => {
+      if (!confirm(`Delete ${shortCode}?`)) return;
+
+      try {
+        const response = await fetch(`/delete/${shortCode}`, { method: "DELETE" });
+        if (response.ok) {
+          fetchShortenedURLs(); // refresh list after delete
+        } else {
+          alert("Failed to delete link");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Server error occurred");
+      }
+    };
+
+    // Load all links when page loads
+    fetchShortenedURLs();
+  </script>
+</body>
+</html>
