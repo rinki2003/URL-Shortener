@@ -97,3 +97,12 @@ ul li {
   font-size: 0.95rem;
   border-left: 4px solid #667eea;
 }
+.logo-container {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.logo {
+    width: 120px; /* adjust as needed */
+    height: auto;
+}
