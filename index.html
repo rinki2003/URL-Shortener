@@ -26,75 +26,79 @@
     <ul id="Shortened-urls"></ul>
   </div>
 
+  
   <script>
-    // Fetch all shortened links and display
-    const fetchShortenedURLs = async () => {
-      try {
-        const response = await fetch("/links");
-        const links = await response.json();
+  // Helper: Load links from localStorage
+  const loadLinks = () => {
+    const data = localStorage.getItem("links");
+    return data ? JSON.parse(data) : {};
+  };
 
-        const list = document.getElementById("Shortened-urls");
-        list.innerHTML = ""; // clear previous entries
+  // Helper: Save links to localStorage
+  const saveLinks = (links) => {
+    localStorage.setItem("links", JSON.stringify(links));
+  };
 
-        for (const [shortCode, url] of Object.entries(links)) {
-          const li = document.createElement("li");
-          li.innerHTML = `
-            <a href="/${shortCode}" target="_blank">${window.location.origin}/${shortCode}</a> → ${url}
-            <button onclick="deleteLink('${shortCode}')">Delete</button>
-          `;
-          list.appendChild(li);
-        }
-      } catch (err) {
-        console.error("Error fetching links:", err);
-      }
-    };
+  // Display links in the <ul>
+  const displayLinks = () => {
+    const links = loadLinks();
+    const list = document.getElementById("Shortened-urls");
+    list.innerHTML = "";
 
-    // Handle form submission
-    document.getElementById("shorten-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
+    for (const [shortCode, url] of Object.entries(links)) {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <a href="${url}" target="_blank">${shortCode}</a> → ${url} 
+        <button class="delete-btn" data-code="${shortCode}">Delete</button>
+      `;
+      list.appendChild(li);
+    }
 
-      const url = document.getElementById("url").value;
-      const shortCode = document.getElementById("shortCode").value;
-
-      try {
-        const response = await fetch("/shorten", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, shortCode })
-        });
-
-        if (response.ok) {
-          fetchShortenedURLs(); // refresh the list
-          document.getElementById("shorten-form").reset(); // clear form
-        } else {
-          const errorMessage = await response.text();
-          alert(errorMessage);
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Server error occurred");
-      }
+    // Add event listeners for delete buttons
+    document.querySelectorAll(".delete-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const code = e.target.getAttribute("data-code");
+        const links = loadLinks();
+        delete links[code];  // remove from localStorage
+        saveLinks(links);
+        displayLinks();      // refresh list
+      });
     });
+  };
 
-    // Delete a link
-    const deleteLink = async (shortCode) => {
-      if (!confirm(`Delete ${shortCode}?`)) return;
+  // Handle form submission
+  document.getElementById("shorten-form").addEventListener("submit", (e) => {
+    e.preventDefault();
 
-      try {
-        const response = await fetch(`/delete/${shortCode}`, { method: "DELETE" });
-        if (response.ok) {
-          fetchShortenedURLs(); // refresh list after delete
-        } else {
-          alert("Failed to delete link");
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Server error occurred");
-      }
-    };
+    const url = document.getElementById("url").value.trim();
+    let shortCode = document.getElementById("shortCode").value.trim();
 
-    // Load all links when page loads
-    fetchShortenedURLs();
+    if (!url) return alert("Please enter a valid URL");
+
+    const links = loadLinks();
+
+    // Generate random code if none provided
+    if (!shortCode) {
+      shortCode = Math.random().toString(36).substring(2, 8);
+    }
+
+    // Check if shortCode already exists
+    if (links[shortCode]) {
+      return alert("This short code already exists. Choose another.");
+    }
+
+    links[shortCode] = url;
+    saveLinks(links);
+    displayLinks();
+
+    e.target.reset();
+    console.log("URL:", url, "Short Code:", shortCode);
+  });
+
+  // Load links on page load
+  displayLinks();
+</script>
+
   </script>
 </body>
 </html>
